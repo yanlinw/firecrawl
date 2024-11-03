@@ -3,7 +3,7 @@ version: "3.8"
 
 
 x-common-service: &common-service
-  build: yanlinw/firecrawl-api@latest
+  build: apps/api
   networks:
     - backend
   extra_hosts:
@@ -11,7 +11,7 @@ x-common-service: &common-service
 
 services:
   playwright-service:
-    build: yanlinw/firecrawl-playwright-service@latest
+    build: apps/playwright-service
     environment:
       - PORT=3000
       - PROXY_SERVER=${PROXY_SERVER}
