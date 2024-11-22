@@ -103,7 +103,7 @@ services:
     volumes:
       - '~/.cloudflared:/etc/cloudflared' 
     depends_on:
-      - mysql
+      - api 
     ## Set this if MySQL is not running within a Docker Container:  
     # network_mode: host 
 
