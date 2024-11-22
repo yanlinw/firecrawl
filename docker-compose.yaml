@@ -104,6 +104,8 @@ services:
       - '~/.cloudflared:/etc/cloudflared' 
     depends_on:
       - api 
+    networks:
+      - backend 
     ## Set this if MySQL is not running within a Docker Container:  
     # network_mode: host 
 
