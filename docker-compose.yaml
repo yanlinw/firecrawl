@@ -94,6 +94,19 @@ services:
       - backend
     command: redis-server --bind 0.0.0.0
 
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run 
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    volumes:
+      - '~/.cloudflared:/etc/cloudflared' 
+    depends_on:
+      - mysql
+    ## Set this if MySQL is not running within a Docker Container:  
+    # network_mode: host 
+
 networks:
   backend:
     driver: bridge
