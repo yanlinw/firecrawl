@@ -4,13 +4,14 @@ use kuchikiki::{parse_html, traits::TendrilSink};
 use serde::Deserialize;
 use serde_json::Value;
 use url::Url;
+use libc;
 
 /// Extracts links from HTML
 /// 
 /// # Safety
 /// Input options must be a C HTML string. Output will be a JSON string array. Output string must be freed with free_string.
 #[no_mangle]
-pub unsafe extern "C" fn extract_links(html: *const libc::c_char) -> *mut i8 {
+pub unsafe extern "C" fn extract_links(html: *const libc::c_char) -> *mut libc::c_char {
     let html = unsafe { CStr::from_ptr(html) }.to_str().unwrap();
 
     let document = parse_html().one(html);
@@ -30,7 +31,7 @@ pub unsafe extern "C" fn extract_links(html: *const libc::c_char) -> *mut i8 {
         out.push(href);
     }
 
-    CString::new(serde_json::ser::to_string(&out).unwrap()).unwrap().into_raw()
+    CString::new(serde_json::ser::to_string(&out).unwrap()).unwrap().into_raw() as *mut libc::c_char
 }
 
 macro_rules! insert_meta_name {
@@ -54,7 +55,7 @@ macro_rules! insert_meta_property {
 /// # Safety
 /// Input options must be a C HTML string. Output will be a JSON object. Output string must be freed with free_string.
 #[no_mangle]
-pub unsafe extern "C" fn extract_metadata(html: *const libc::c_char) -> *mut i8 {
+pub unsafe extern "C" fn extract_metadata(html: *const libc::c_char) -> *mut libc::c_char {
     let html = unsafe { CStr::from_ptr(html) }.to_str().unwrap();
 
     let document = parse_html().one(html);
@@ -150,7 +151,7 @@ pub unsafe extern "C" fn extract_metadata(html: *const libc::c_char) -> *mut i8 
         }
     }
 
-    CString::new(serde_json::ser::to_string(&out).unwrap()).unwrap().into_raw()
+    CString::new(serde_json::ser::to_string(&out).unwrap()).unwrap().into_raw() as *mut libc::c_char
 }
 
 const EXCLUDE_NON_MAIN_TAGS: [&str; 41] = [
@@ -334,11 +335,11 @@ fn _transform_html_inner(opts: TranformHTMLOptions) -> Result<String, ()> {
 /// # Safety
 /// Input options must be a C JSON string. Output will be an HTML string. Output string must be freed with free_string.
 #[no_mangle]
-pub unsafe extern "C" fn transform_html(opts: *const libc::c_char) -> *mut i8 {
+pub unsafe extern "C" fn transform_html(opts: *const libc::c_char) -> *mut libc::c_char {
     let opts: TranformHTMLOptions = match unsafe { CStr::from_ptr(opts) }.to_str().map_err(|_| ()).and_then(|x| serde_json::de::from_str(x).map_err(|_| ())) {
         Ok(x) => x,
         Err(_) => {
-            return CString::new("RUSTFC:ERROR").unwrap().into_raw();
+            return CString::new("RUSTFC:ERROR").unwrap().into_raw() as *mut libc::c_char;
         }
     };
 
@@ -355,6 +356,8 @@ pub unsafe extern "C" fn transform_html(opts: *const libc::c_char) -> *mut i8 {
 /// # Safety
 /// ptr must be a non-freed string pointer returned by Rust code.
 #[no_mangle]
-pub unsafe extern "C" fn free_string(ptr: *mut i8) {
-    drop(unsafe { CString::from_raw(ptr) })
+pub unsafe extern "C" fn free_string(ptr: *mut libc::c_char) {
+    if !ptr.is_null() {
+        drop(unsafe { CString::from_raw(ptr) })
+    }
 }

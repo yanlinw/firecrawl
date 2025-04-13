@@ -1,4 +1,4 @@
-FROM node:20-slim AS base
+FROM --platform=linux/amd64 node:20-slim AS base
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
@@ -11,10 +11,10 @@ RUN corepack enable
 COPY . /app
 WORKDIR /app
 
-FROM base AS prod-deps
+FROM --platform=linux/amd64 base AS prod-deps
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile
 
-FROM base AS build
+FROM --platform=linux/amd64 base AS build
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 RUN apt-get clean && apt-get update -qq && apt-get install -y ca-certificates && update-ca-certificates
@@ -23,7 +23,7 @@ RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN \
     bash -c 'export SENTRY_AUTH_TOKEN="$(cat /run/secrets/SENTRY_AUTH_TOKEN)"; if [ -z $SENTRY_AUTH_TOKEN ]; then pnpm run build:nosentry; else pnpm run build; fi'
 
 # Install Go
-FROM golang:1.19 AS go-base
+FROM --platform=linux/amd64 golang:1.19 AS go-base
 COPY sharedLibs/go-html-to-md /app/sharedLibs/go-html-to-md
 
 # Install Go dependencies and build parser lib
@@ -33,7 +33,7 @@ RUN cd /app/sharedLibs/go-html-to-md && \
     chmod +x html-to-markdown.so
 
 # Install Rust
-FROM rust:1-bullseye AS rust-base
+FROM --platform=linux/amd64 rust:1-bullseye AS rust-base
 COPY sharedLibs/html-transformer /app/sharedLibs/html-transformer
 
 # Install Go dependencies and build parser lib
@@ -41,7 +41,7 @@ RUN cd /app/sharedLibs/html-transformer && \
     cargo build --release && \
     chmod +x target/release/libhtml_transformer.so
 
-FROM base
+FROM --platform=linux/amd64 base
 COPY --from=prod-deps /app/node_modules /app/node_modules
 COPY --from=build /app /app
 COPY --from=go-base /app/sharedLibs/go-html-to-md/html-to-markdown.so /app/sharedLibs/go-html-to-md/html-to-markdown.so

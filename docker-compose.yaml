@@ -1,7 +1,11 @@
 name: firecrawl
 
 x-common-service: &common-service
-  build: apps/api
+  build: 
+    context: apps/api
+    args:
+      - SKIP_RUST_BUILD=true
+  image: ${FIRECRAWL_API_IMAGE:-firecrawl-api:latest}
   ulimits:
     nofile:
       soft: 65535
@@ -14,6 +18,7 @@ x-common-service: &common-service
 services:
   playwright-service:
     build: apps/playwright-service
+    image: ${FIRECRAWL_PLAYWRIGHT_IMAGE:-firecrawl-playwright-service:latest}
     environment:
       - PORT=3000
       - PROXY_SERVER=${PROXY_SERVER}

@@ -1,14 +1,33 @@
-FROM python:3.11-slim
+FROM --platform=linux/amd64 mcr.microsoft.com/playwright:v1.41.1-jammy
 
+# Install Python3 first
+RUN set -x \
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/* /var/cache/apt/*.bin /var/log/* /tmp/* /var/tmp/* \
+    && echo "APT::Get::AllowUnauthenticated \"true\";" > /etc/apt/apt.conf.d/99allow-unauth \
+    && apt-get clean \
+    && apt-get update -o Acquire::AllowInsecureRepositories=true \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends --allow-unauthenticated python3 \
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/* /var/cache/apt/*.bin /var/log/* /tmp/* /var/tmp/*
+
+# Install pip separately
+RUN set -x \
+    && apt-get update -o Acquire::AllowInsecureRepositories=true \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends --allow-unauthenticated python3-pip \
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/* /var/cache/apt/*.bin \
+    && ln -sf /usr/bin/python3 /usr/bin/python \
+    && ln -sf /usr/bin/pip3 /usr/bin/pip
+
+# Install libstdc++6 separately
+RUN set -x \
+    && apt-get update -o Acquire::AllowInsecureRepositories=true \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends --allow-unauthenticated libstdc++6 \
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/* /var/cache/apt/*.bin
+
+# Set working directory and env vars
+WORKDIR /app
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    libstdc++6
-
-WORKDIR /app
 
 # Install Python dependencies
 COPY requirements.txt ./
@@ -24,10 +43,6 @@ RUN pip install --no-cache-dir --upgrade -r requirements.txt && \
 # xserver-common and xvfb included by playwright installation but not needed after
 # perl-base is part of the base Python Debian image but not needed for Danswer functionality
 # perl-base could only be removed with --allow-remove-essential
-
-
-
-
 
 COPY . ./
 
